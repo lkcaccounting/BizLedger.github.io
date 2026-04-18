@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lkc-accounting-v1';
+const CACHE_NAME = 'ProBooks-v1';
 const ASSETS = [
   '/',
   '/index.html',
