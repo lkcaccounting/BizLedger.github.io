@@ -1,6 +1,6 @@
 {
-  "name": "LKC Accounting",
-  "short_name": "LKC Accounting",
+  "name": "ProBooks",
+  "short_name": "ProBooks",
   "description": "Professional accounting software for business owners",
   "start_url": "/app.com/index.html",
   "scope": "/app.com/",
