@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ProBooks AI — Debug Test</title>
+  <style>
+    body { font-family: monospace; background: #0a0e1a; color: #e8edf5; padding: 30px; }
+    h2 { color: #22c55e; }
+    button {
+      background: #22c55e; color: #000; border: none;
+      padding: 12px 24px; font-size: 16px; cursor: pointer;
+      border-radius: 8px; margin: 10px 0; font-family: monospace;
+    }
+    #result {
+      background: #141c2e; border: 1px solid #1e2d45;
+      padding: 20px; border-radius: 8px; margin-top: 20px;
+      white-space: pre-wrap; font-size: 14px; min-height: 100px;
+    }
+    .ok  { color: #22c55e; font-weight: bold; }
+    .err { color: #ef4444; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>🔧 ProBooks AI — Connection Test</h2>
+  <p>Click the button below. It will tell you exactly what is wrong.</p>
+  <button onclick="runTest()">▶ Run Diagnostic Test</button>
+  <div id="result">Waiting for test...</div>
+
+<script>
+const PROXY = 'https://aiprobooks.netlify.app/.netlify/functions/ai';
+
+async function runTest() {
+  const box = document.getElementById('result');
+  box.innerHTML = '⏳ Testing...\n';
+
+  // Step 1: Can we reach Netlify at all?
+  box.innerHTML += '\n📡 Step 1: Reaching proxy...\n';
+  try {
+    const r1 = await fetch(PROXY, { method: 'GET' });
+    const t1 = await r1.text();
+    box.innerHTML += `<span class="ok">✅ Proxy reachable. Response: ${t1}</span>\n`;
+  } catch(e) {
+    box.innerHTML += `<span class="err">❌ Cannot reach proxy at all.\nError: ${e.message}\nFix: Check your Netlify site is deployed and the URL is correct.</span>\n`;
+    return;
+  }
+
+  // Step 2: Send a real POST request
+  box.innerHTML += '\n📨 Step 2: Sending test AI request...\n';
+  try {
+    const r2 = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 50,
+        messages: [{ role: 'user', content: 'Say exactly: ProBooks AI is working!' }]
+      })
+    });
+
+    const raw = await r2.text();
+    box.innerHTML += `HTTP Status: ${r2.status}\n`;
+    box.innerHTML += `Raw response:\n${raw}\n\n`;
+
+    try {
+      const json = JSON.parse(raw);
+
+      if (json.content && json.content[0] && json.content[0].text) {
+        box.innerHTML += `<span class="ok">🎉 SUCCESS! AI responded: "${json.content[0].text}"</span>\n`;
+        box.innerHTML += `\n<span class="ok">✅ Everything is working! The problem is in probooks-ai.html — upload the latest version from Claude.</span>`;
+      } else if (json.error) {
+        box.innerHTML += `<span class="err">❌ Error from proxy/API: ${JSON.stringify(json.error)}</span>\n`;
+
+        if (JSON.stringify(json.error).includes('API key')) {
+          box.innerHTML += `\n<span class="err">FIX: Your ANTHROPIC_API_KEY in Netlify is wrong or missing.\nGo to Netlify → Site configuration → Environment variables → delete and re-add it.</span>`;
+        } else if (JSON.stringify(json.error).includes('auth') || r2.status == 401) {
+          box.innerHTML += `\n<span class="err">FIX: API key is invalid or deactivated.\nCreate a new key at console.anthropic.com → API Keys → Create Key\nThen update it in Netlify environment variables.</span>`;
+        }
+      } else {
+        box.innerHTML += `<span class="err">❌ Unexpected response: ${raw}</span>`;
+      }
+    } catch(pe) {
+      box.innerHTML += `<span class="err">❌ Response is not valid JSON.\nRaw: ${raw}</span>`;
+    }
+  } catch(e) {
+    box.innerHTML += `<span class="err">❌ POST request failed.\nError: ${e.message}</span>`;
+  }
+}
+</script>
+</body>
+</html>
